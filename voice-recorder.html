@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recorder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #000;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+            margin-bottom: 50px;
+            font-size: 36px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            margin: 15px;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            background-color: #007bff;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            background-color: #b0bec5;
+        }
+
+        button:not(:disabled):hover {
+            background-color: #0056b3;
+        }
+
+        button:not(:disabled):active {
+            transform: scale(0.98);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 40px;
+        }
+
+        .mic-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 40px;
+            width: 150px;
+            height: 150px;
+        }
+
+        .wave {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid rgba(0, 0, 0, 0.2);
+            animation: wiggle 1.5s infinite;
+            animation-play-state: paused;
+        }
+
+        .rec-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 2;
+            animation: blink 1s infinite, pulse 1.5s infinite, rgbGlow 3s infinite;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 1), 0 0 40px rgba(255, 0, 0, 0.7), 0 0 60px rgba(255, 0, 0, 0.5);
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        @keyframes rgbGlow {
+            0% { text-shadow: 0 0 20px red, 0 0 40px red, 0 0 60px red; color: red; }
+            33% { text-shadow: 0 0 20px green, 0 0 40px green, 0 0 60px green; color: green; }
+            66% { text-shadow: 0 0 20px blue, 0 0 40px blue, 0 0 60px blue; color: blue; }
+            100% { text-shadow: 0 0 20px red, 0 0 40px red, 0 0 60px red; color: red; }
+        }
+
+        @keyframes wiggle {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        #waveform {
+            width: 80%;
+            max-width: 600px;
+            height: 150px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background-color: #000;
+            margin: 40px auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #recognized-text {
+            color: #fff;
+            font-size: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Recorder</h1>
+    <div class="container">
+        <div class="mic-container">
+            <div class="wave" id="mic-wave"></div>
+            <div id="rec-text" class="rec-text" style="display: none;">REC</div>
+        </div>
+
+        <canvas id="waveform" width="400" height="100"></canvas>
+
+        <div class="button-container">
+            <button id="start-recording">Start Recording</button>
+            <button id="stop-recording" disabled>Stop Recording</button>
+        </div>
+
+        <div id="recognized-text"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let canvas = document.getElementById('waveform');
+        let ctx = canvas.getContext('2d');
+        let analyser;
+        let audioContext;
+        let stream;
+
+        const micWave = document.getElementById('mic-wave');
+        const recText = document.getElementById('rec-text');
+
+        // For speech recognition
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+
+        document.getElementById('start-recording').addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                audioChunks = [];
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                recognition.start(); // Start speech recognition
+
+                document.getElementById('stop-recording').disabled = false;
+                document.getElementById('start-recording').disabled = true;
+
+                recText.style.display = 'block';
+                micWave.style.animationPlayState = 'running';
+
+                drawWaveform();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Microphone access is required.');
+            }
+        });
+
+        document.getElementById('stop-recording').addEventListener('click', () => {
+            mediaRecorder.stop();
+            mediaRecorder.onstop = () => {
+                recognition.stop(); // Stop speech recognition
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                console.log(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            recText.style.display = 'none';
+            micWave.style.animationPlayState = 'paused';
+
+            document.getElementById('stop-recording').disabled = true;
+            document.getElementById('start-recording').disabled = false;
+        });
+
+        recognition.onresult = (event) => {
+            const recognizedText = event.results[0][0].transcript;
+            document.getElementById('recognized-text').textContent = `Recognized Speech: ${recognizedText}`;
+            // Store the recognized text globally for use in the translator
+            window.recognizedSpeech = recognizedText; // Store recognized speech globally
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error", event); 
+        };
+
+        function drawWaveform() {
+            if (!mediaRecorder) return;
+            requestAnimationFrame(drawWaveform);
+            const bufferLength = analyser.frequencyBinCount;
+            const data = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(data);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+
+            let r = 0, g = 0, b = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const x = i * canvas.width / bufferLength;
+                const y = canvas.height / 2 + (data[i] * canvas.height / 256);
+
+                r = Math.floor(255 * (i / bufferLength));
+                g = Math.floor(255 * ((bufferLength - i) / bufferLength));
+                b = Math.floor(255 * (Math.sin(i / bufferLength * Math.PI)));
+
+                ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+    </script>
+</body>
+</html>
