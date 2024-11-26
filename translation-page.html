@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Translator</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .file-upload {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label {
+            display: block;
+            padding: 15px;
+            background: #5cb85c;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        label:hover {
+            background: #4cae4c;
+        }
+
+        .select-container {
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: #fff;
+            color: #333;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #007bff;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+
+        .mic-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 40px;
+        }
+
+        .rec-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: bold;
+            color: red;
+            display: none;
+        }
+
+        canvas {
+            width: 80%;
+            max-width: 600px;
+            height: 150px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background-color: #000;
+            margin: 40px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Translator</h1>
+        <form id="uploadForm">
+            <div class="file-upload">
+                <input type="file" id="audioUpload" accept="audio/*">
+                <label for="audioUpload">Upload Audio File <i class="fas fa-upload"></i></label>
+            </div>
+
+            <div class="file-upload">
+                <label for="recordingLink" onclick="navigateToRecording()">Voice Recording <i class="fas fa-microphone"></i></label>
+            </div>
+
+            <div class="select-container">
+                <label for="sourceLang">Source Language:</label>
+                <select id="sourceLang" required>
+                    <option value="telugu">Telugu</option>
+                    <option value="english">English</option>
+                    <option value="hindi">Hindi</option>
+                    <option value="tamil">Tamil</option>
+                </select>
+            </div>
+
+            <div class="select-container">
+                <label for="targetLang">Target Language:</label>
+                <select id="targetLang" required>
+                    <option value="english">English</option>
+                    <option value="telugu">Telugu</option>
+                    <option value="hindi">Hindi</option>
+                    <option value="tamil">Tamil</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn">Translate <i class="fas fa-arrow-right"></i></button>
+        </form>
+
+        <audio id="outputAudio" controls style="display: none;"></audio>
+    </div>
+
+    <script>
+        function navigateToRecording() {
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>Voice Recorder</h1>
+                    <div class="mic-container">
+                        <div id="rec-text" class="rec-text">REC</div>
+                    </div>
+                    <canvas id="waveform"></canvas>
+                    <h2>Add Your Voice</h2>
+                    <div class="button-container">
+                        <button id="start-recording">Start Recording</button>
+                        <button id="stop-recording" disabled>Stop Recording</button>
+                    </div>
+                    <div id="recognized-text"></div>
+                </div>
+                <style>
+                    body { background-color: #000; color: #fff; }
+                </style>
+            `;
+
+            setupRecording();
+        }
+
+        function setupRecording() {
+            let mediaRecorder;
+            let audioChunks = [];
+            const canvas = document.getElementById('waveform');
+            const ctx = canvas.getContext('2d');
+            let analyser;
+            let audioContext;
+            let stream;
+
+            const recText = document.getElementById('rec-text');
+
+            document.getElementById('start-recording').addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new AudioContext();
+                    analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    source.connect(analyser);
+                    analyser.fftSize = 256;
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    document.getElementById('stop-recording').disabled = false;
+                    document.getElementById('start-recording').disabled = true;
+
+                    recText.style.display = 'block';
+                    drawWaveform();
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const outputAudio = document.createElement('audio');
+                        outputAudio.src = audioUrl;
+                        outputAudio.controls = true;
+                        document.body.appendChild(outputAudio);
+                        outputAudio.play();
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Microphone access is required.');
+                }
+            });
+
+            document.getElementById('stop-recording').addEventListener('click', () => {
+                mediaRecorder.stop();
+                recText.style.display = 'none';
+                document.getElementById('stop-recording').disabled = true;
+                document.getElementById('start-recording').disabled = false;
+            });
+
+            function drawWaveform() {
+                if (!mediaRecorder) return;
+                requestAnimationFrame(drawWaveform);
+                const bufferLength = analyser.frequencyBinCount;
+                const data = new Uint8Array(bufferLength);
+                analyser.getByteTimeDomainData(data);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const x = (i / bufferLength) * canvas.width;
+                    const y = (data[i] / 128) * (canvas.height / 2);
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.strokeStyle = 'red';
+                ctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>
