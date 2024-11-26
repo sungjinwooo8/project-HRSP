@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Translator</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+        }
+
+        input[type="email"], input[type="password"], input[type="text"], input[type="file"], select {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        input[type="submit"], .submit-btn, button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            color: rgb(29, 26, 26);
+            cursor: pointer;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        .submit-btn {
+            background: #28a745;
+        }
+
+        button {
+            background: #5cb85c;
+        }
+
+        input[type="submit"]:hover, .submit-btn:hover, button:hover {
+            box-shadow: 0 0 20px rgba(13, 12, 12, 0.8), 0 0 30px rgba(17, 16, 16, 0.6);
+        }
+
+        .forgot-password {
+            margin-top: 10px;
+            color: #f1c40f;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .strength-meter {
+            height: 5px;
+            border-radius: 5px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .weak {
+            background: red;
+        }
+
+        .medium {
+            background: orange;
+        }
+
+        .strong {
+            background: green;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div id="login" class="container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="submit" value="Sign In">
+            <div class="forgot-password" onclick="forgotPassword()">Forgot Password?</div>
+        </form>
+        <p>Don't have an account? <button id="showRegister">Register</button></p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register" class="container" style="display:none;">
+        <h1>Register</h1>
+        <form id="registerForm">
+            <input type="email" id="regEmail" placeholder="Email" required>
+            <input type="password" id="regPassword" placeholder="Password" required>
+            <div id="passwordStrength" class="strength-meter"></div>
+            <input type="submit" value="Sign Up">
+        </form>
+        <p>Already have an account? <button id="showLogin">Login</button></p>
+    </div>
+
+    <!-- Audio Translator Form -->
+    <div id="audioTranslator" class="container" style="display:none;">
+        <h1>Audio Translator</h1>
+        <form id="uploadForm">
+            <div class="file-upload">
+                <input type="file" id="audioUpload" accept="audio/*">
+                <label for="audioUpload">Upload Audio File <i class="fas fa-upload"></i></label>
+            </div>
+
+            <div>
+                <label for="sourceLang">Source Language:</label>
+                <select id="sourceLang" required>
+                    <option value="telugu">Telugu</option>
+                    <option value="english">English</option>
+                    <option value="hindi">Hindi</option>
+                    <option value="tamil">Tamil</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="targetLang">Target Language:</label>
+                <select id="targetLang" required>
+                    <option value="english">English</option>
+                    <option value="telugu">Telugu</option>
+                    <option value="hindi">Hindi</option>
+                    <option value="tamil">Tamil</option>
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn">Translate <i class="fas fa-arrow-right"></i></button>
+        </form>
+
+        <audio id="outputAudio" controls style="display: none;"></audio>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="container" style="display:none;">
+        <h1>Forgot Password</h1>
+        <form id="forgotPasswordForm">
+            <input type="email" id="forgotEmail" placeholder="Enter your email" required>
+            <button type="submit" class="submit-btn">Send OTP</button>
+        </form>
+
+        <!-- OTP Verification Form -->
+        <form id="otpForm" style="display:none;">
+            <input type="text" id="otpInput" placeholder="Enter OTP" required>
+            <button type="submit" class="submit-btn">Verify OTP</button>
+        </form>
+
+        <!-- Reset Password Form -->
+        <form id="resetPasswordForm" style="display:none;">
+            <input type="password" id="newPassword" placeholder="New Password" required>
+            <input type="password" id="confirmNewPassword" placeholder="Confirm Password" required>
+            <button type="submit" class="submit-btn">Reset Password</button>
+        </form>
+
+        <button id="backToLogin" class="submit-btn">Back to Login</button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/auth'; // Replace with your backend URL
+
+        // Forgot Password Functionality
+        const forgotPasswordModal = document.getElementById("forgotPasswordModal");
+        const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+        const otpForm = document.getElementById("otpForm");
+        const resetPasswordForm = document.getElementById("resetPasswordForm");
+
+        function forgotPassword() {
+            // Show the forgot password modal
+            document.getElementById("login").style.display = "none";
+            forgotPasswordModal.style.display = "block";
+        }
+
+        // Handle "Send OTP" form
+        forgotPasswordForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const email = document.getElementById("forgotEmail").value;
+
+            try {
+                // Send OTP to email via API
+                const response = await fetch(`${API_URL}/send-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email }),
+                });
+
+                if (!response.ok) throw new Error('Failed to send OTP');
+
+                alert('OTP sent to your email!');
+                forgotPasswordForm.style.display = "none";
+                otpForm.style.display = "block";  // Show OTP form
+
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Handle OTP verification
+        otpForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const email = document.getElementById("forgotEmail").value;
+            const otp = document.getElementById("otpInput").value;
+
+            try {
+                // Verify OTP via API
+                const response = await fetch(`${API_URL}/verify-otp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, otp }),
+                });
+
+                if (!response.ok) throw new Error('OTP verification failed');
+
+                alert('OTP verified successfully!');
+                otpForm.style.display = "none";
+                resetPasswordForm.style.display = "block";  // Show reset password form
+
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Handle password reset
+        resetPasswordForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const email = document.getElementById("forgotEmail").value;
+            const newPassword = document.getElementById("newPassword").value;
+            const confirmNewPassword = document.getElementById("confirmNewPassword").value;
+
+            if (newPassword !== confirmNewPassword) {
+                alert("Passwords do not match!");
+                return;
+            }
+
+            try {
+                // Reset the password via API
+                const response = await fetch(`${API_URL}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, newPassword }),
+                });
+
+                if (!response.ok) throw new Error('Password reset failed');
+
+                alert('Password reset successful!');
+                resetPasswordForm.style.display = "none";
+                forgotPasswordModal.style.display = "none";
+                document.getElementById("login").style.display = "block";  // Redirect to login
+
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Back to login button
+        document.getElementById("backToLogin").addEventListener("click", function () {
+            forgotPasswordModal.style.display = "none";
+            document.getElementById("login").style.display = "block";
+        });
+
+        // Show/hide Login and Register Forms
+        document.getElementById("showRegister").addEventListener("click", function () {
+            document.getElementById("login").style.display = "none";
+            document.getElementById("register").style.display = "block";
+        });
+
+        document.getElementById("showLogin").addEventListener("click", function () {
+            document.getElementById("register").style.display = "none";
+            document.getElementById("login").style.display = "block";
+        });
+    </script>
+</body>
+</html>
