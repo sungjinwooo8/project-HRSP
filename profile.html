@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        main {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        .profile-info {
+            margin-bottom: 20px;
+        }
+
+        .profile-info label {
+            font-weight: bold;
+        }
+
+        .options {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .option-item {
+            margin: 10px 0;
+        }
+
+        .option-item a {
+            text-decoration: none;
+            color: #4a90e2;
+            font-weight: bold;
+            padding: 10px;
+            display: block;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .option-item a:hover {
+            background-color: #e3f2fd;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Translator - User Profile</h1>
+    </header>
+    <main>
+        <h2>Welcome, [User's Name]!</h2>
+        <div class="profile-info">
+            <p><label>Email:</label> [user@example.com]</p>
+            <p><label>Phone Number:</label> [+1234567890]</p>
+            <p><label>Account Created:</label> [Date]</p>
+        </div>
+
+        <h3>Your Options:</h3>
+        <div class="options">
+            <div class="option-item"><a href="#" onclick="window.location.href='voice-recorder.html'">Voice Recorder</a></div>
+            <div class="option-item"><a href="#" onclick="window.location.href='translation-page.html'">Start Translating</a></div>
+            <div class="option-item"><a href="#" onclick="alert('View Translation History')">View Translation History</a></div>
+            <div class="option-item"><a href="#" onclick="window.location.href='profile-management.html'">Manage Profile</a></div>
+            <div class="option-item"><a href="#" onclick="alert('Logging Out...')">Log Out</a></div>
+        </div>
+    </main>
+    
+    <footer>
+        <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+        <p>Contact Us</p>  
+    </footer>
+</body>
+</html>
